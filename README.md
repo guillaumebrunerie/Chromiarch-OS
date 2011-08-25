@@ -75,4 +75,62 @@ something, you will not be able to sign your changes (unless you have Google’s
 key) and your computer will not boot anymore. This mode is intended for normal people
 using Chrome OS normally, this make viruses very difficult to do.
 
-As you
+As you can guess, there is another mode (called developer mode) which will allow you to
+disable those protections. You can switch to dev mode with the dev mode switch present on
+your device (for the Samsung Chromebook, a photo is available on [this page](TODO)).
+
+Shut down your computer, flip the dev mode switch and boot your computer. You will see a
+screen with a sad computer asking you to press space because Chrome OS is broken. This is
+a lie! Chrome OS is not broken, and you have to press Ctrl + D to boot Chrome OS (you will
+need to do this every time your computer will boot, this is the drawback of dev mode).
+This screen is intended to normal users having accidentally flipped the dev mode switch.
+Such a user will most likely either switch off the dev mode switch, run recovery mode or
+call technical support, so will not run a potentially unsecure operating system.
+
+During the first boot in dev mode, Chrome OS will slowly erase the stateful partition
+(more on partitions later) so you will have to wait 5 / 10 minutes. You will lose
+everything that was there: last open tabs, downloaded files, offlineness of
+offline-capable apps, cookies, remembered users and Wi-Fi networks, etc. You will not lose
+your data which is in the cloud of course, that’s the whole point of Chrome OS.
+
+You should now be in Chrome OS with the dev mode switch on. You have now access to tty2
+(with Ctrl + Alt + ->, because -> = F2), you have the kernel messages on tty8, and you can
+have a graphical terminal emulator: press Ctrl + Alt + T to open crosh and use the "shell"
+command. You can either connect as root or connect as chronos and use "sudo". But / is
+still mounted read-only and verification of cryptographic signatures is still active.
+
+Partitions
+----------
+
+Before going on, I should explain the (non standard) partitionning system of Chrome OS.
+
+Unlike many computers, Chrome OS uses GPT partition tables. This is a "new" partitionning
+system replacing the old MBR, without restrictions on the number or the size of partitions
+(with the MBR you can only have 4 primary partitions, if you want more you need to use
+extended and logical partitions). We will use the cgpt tool (present in Chrome OS) to
+tweak partitions.
+
+If you run "sudo cgpt show /dev/sda" you will see the partitions present on your drive.
+The output should be something like:
+TODO
+
+There are a lot of partitions here. Let’s take a look at the more important partitions.
+
+KERN-A and KERN-B are kernel partitions. They contain the Linux kernel and the signature.
+Those partitions are not formatted with any filesystem (in order to make boot faster, the
+bootloader doesn’t have to parse any filesystem)
+
+Developer mode, part 2
+----------------------
+
+We will now replace the BIOS by the dev BIOS which will accept a self-signed kernel and
+then remove rootfs verification by the kernel. To install the dev BIOS, run the command
+"chromeos-firmwareupdate --mode=todev" (as root) and reboot (the warning screen will not
+be the same). Now that you are using the dev firmware you can remove rootfs verification
+with the command "/usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification" (the
+command will actually not work but will tell you the correct command).
+
+If you reboot now, you should have rootfs verification disabled and mounted read-write
+(you can test it with "touch /a" as chronos, if you have a permission error it is mounted
+read-write, you will have a "read-only filesystem" error if it is not).
+
