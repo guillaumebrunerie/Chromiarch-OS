@@ -41,8 +41,8 @@ You can also perhaps use prebuilt binaries, like Hexxeh’s builds, I guess it s
 Quick explanation
 -----------------
 
-If you are already a Chrome OS hacker, here is a very short resume of what will be done to
-make Arch run inside Chrome OS. Don’t worry, a much much more detailed explanation will
+If you are already a Chrome OS hacker, here is a very short outline of what will be done
+to make Arch run inside Chrome OS. Don’t worry, a much much more detailed explanation will
 follow.
 
 You will switch your device to developer mode, create a new partition for Arch, install
@@ -59,9 +59,9 @@ Before beginning, a few notes:
 computer. You will not need to do anything illegal.
 * This is reversible. Whatever you do, at any time you can run recovery mode and you will
 come back to factory state. This will not void your warranty at all.
-* This is not completely straightforward (well, everything is relative), if you don’t know
-what a shell is, it will probably be difficult to follow. But I’ll try to keep the
-requirements low, in particular you don’t have to know anything about Chrome OS.
+* This is not straightforward (well, everything is relative), if you don’t know what a
+shell is, it will probably be difficult to follow. But I’ll try to keep the requirements
+low, in particular you don’t have to know anything about Chrome OS.
 
 Developer mode
 --------------
@@ -71,33 +71,34 @@ OK, let’s start.
 When you buy a Chromebook, it is in release mode. This means that you don’t have access to
 a shell, that your root filesystem (the /) is mounted read-only and cryptographically
 signed by Google. So even if you find a way to have a shell and find a way to modify
-something, you will not be able to sign your changes (unless you have Google’s private
-key) and your computer will not boot anymore. This mode is intended for normal people
-using Chrome OS normally, this make viruses very difficult to do.
+something, your computer will not boot anymore (unless you also have Google’s private
+key). This mode is intended for normal people using Chrome OS normally, to make viruses
+very difficult to do.
 
 As you can guess, there is another mode (called developer mode) which will allow you to
 disable those protections. You can switch to dev mode with the dev mode switch present on
-your device (for the Samsung Chromebook, a photo is available on [this page](TODO)).
+your device (for the Samsung Chromebook, a photo is available [here](TODO)).
 
 Shut down your computer, flip the dev mode switch and boot your computer. You will see a
 screen with a sad computer asking you to press space because Chrome OS is broken. This is
-a lie! Chrome OS is not broken, and you have to press Ctrl + D to boot Chrome OS (you will
-need to do this every time your computer will boot, this is the drawback of dev mode).
-This screen is intended to normal users having accidentally flipped the dev mode switch.
-Such a user will most likely either switch off the dev mode switch, run recovery mode or
-call technical support, so will not run a potentially unsecure operating system.
+a lie! Chrome OS is not broken, you just have to press Ctrl + D to boot Chrome OS (you
+will need to do this every time your computer will boot, this is the drawback of dev
+mode). This screen is intended to normal users having accidentally flipped the dev mode
+switch. Such a user will most likely either switch off the dev mode switch, run recovery
+mode or call technical support, so will not run a potentially insecure operating system.
 
 During the first boot in dev mode, Chrome OS will slowly erase the stateful partition
 (more on partitions later) so you will have to wait 5 / 10 minutes. You will lose
-everything that was there: last open tabs, downloaded files, offlineness of
+everything that was there: list of last open tabs, downloaded files, offlineness of
 offline-capable apps, cookies, remembered users and Wi-Fi networks, etc. You will not lose
 your data which is in the cloud of course, that’s the whole point of Chrome OS.
 
-You should now be in Chrome OS with the dev mode switch on. You have now access to tty2
-(with Ctrl + Alt + ->, because -> = F2), you have the kernel messages on tty8, and you can
-have a graphical terminal emulator: press Ctrl + Alt + T to open crosh and use the "shell"
-command. You can either connect as root or connect as chronos and use "sudo". But / is
-still mounted read-only and verification of cryptographic signatures is still active.
+You should now be in Chrome OS with the dev mode switch on. You have now access to a full
+screen console in tty2 (with Ctrl + Alt + ->, because -> = F2), you have the kernel
+messages on tty8 (F8 = mute), and you can have a graphical terminal emulator: press Ctrl +
+Alt + T to open crosh and use the "shell" command. You can either connect as root or
+connect as chronos and use "sudo". But for now / is still mounted read-only and
+verification of cryptographic signatures is still active.
 
 Partitions
 ----------
@@ -111,26 +112,88 @@ extended and logical partitions). We will use the cgpt tool (present in Chrome O
 tweak partitions.
 
 If you run "sudo cgpt show /dev/sda" you will see the partitions present on your drive.
-The output should be something like:
+The output should be something like this (size and positions are expressed in 512 bytes
+blocks):
 TODO
 
 There are a lot of partitions here. Let’s take a look at the more important partitions.
 
-KERN-A and KERN-B are kernel partitions. They contain the Linux kernel and the signature.
-Those partitions are not formatted with any filesystem (in order to make boot faster, the
-bootloader doesn’t have to parse any filesystem)
+KERN-A (/dev/sda2) and KERN-B (/dev/sda4) are kernel partitions. They contain the Linux
+kernel and its signature.  Those partitions are not formatted with any filesystem in order
+to make boot faster (the bootloader doesn’t have to know how to parse a filesystem). They
+have usually a size of 16 MiB.
+
+ROOT-A (/dev/sda3) and ROOT-B (/dev/sda5) are rootfs partitions. Each block is signed and
+the signatures are verified on the fly when blocks are read from the SSD (with a tool
+called dm-verity). They have usually a size of 2 GiB.
+
+The kernel and the rootfs are duplicated in order to make autoupdates easy. Let’s suppose
+you are running on KERN-A with the ROOT-A rootfs. If there is an autoupdate available,
+Chrome OS will download the update directly into KERN-B and ROOT-B, and will change the
+priorities of the partitions such that at the next reboot you will be running on KERN-B
+and ROOT-B.
+
+Kernel partitions have three flags: the successful flag (0-1), the tries flag (0-15) and
+the priority flag (0-15). The BIOS will try to boot the partition with the highest
+priority first. The others flags are used to handle a bad update: if a kernel doesn’t
+boot, the tries flag is decremented, and when tries = successful = 0, this kernel is not
+even tried. If the kernel boots correctly, successful is set to 1 so this kernel will not
+be skipped.
+
+Finally the stateful partition (STATE /dev/sda1) is the partition containing everything
+that has to be read-write and conserved between autoupdates. This includes the /home
+directory, the /var directory and the /usr/local directory (this will be very useful for
+us, because scripts in /usr/local/bin will not be removed when there is an autoupdate).
+This partition takes all the remaining space (usually about 10.7 GiB).
+
+The other partitions are currently not used.
+
+You can see the currently running rootfs partition with the command "rootdev -s", or just
+"rootdev" if rootfs verification is disabled.
 
 Developer mode, part 2
 ----------------------
 
 We will now replace the BIOS by the dev BIOS which will accept a self-signed kernel and
-then remove rootfs verification by the kernel. To install the dev BIOS, run the command
-"chromeos-firmwareupdate --mode=todev" (as root) and reboot (the warning screen will not
-be the same). Now that you are using the dev firmware you can remove rootfs verification
-with the command "/usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification" (the
-command will actually not work but will tell you the correct command).
+then remove rootfs verification by the kernel.
+
+To install the dev BIOS, run the command "chromeos-firmwareupdate --mode=todev" (as root)
+and reboot (the warning screen will not be the same). Now that you are using the dev
+firmware you can remove rootfs verification with the command
+"/usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification" (the command will
+actually not work but will tell you the right "--partitions n" argument to add).
 
 If you reboot now, you should have rootfs verification disabled and mounted read-write
 (you can test it with "touch /a" as chronos, if you have a permission error it is mounted
-read-write, you will have a "read-only filesystem" error if it is not).
+read-write, if you have a "read-only filesystem" error if it is not).
 
+Preparing the partitions
+------------------------
+
+In order to install Arch on ROOT-C, we need to grow the partition to an acceptable size.
+We will steal some space to the stateful partition because 10.7 GiB is way too much for
+it. I do not really know how much space you should leave for the stateful partition, this
+will likely depend on how much offline webapps you will be using. I’m not using many
+webapps and my stateful partition is currently using about 400 MiB (according to df) or
+280 MiB (according to du), so I will give 10 GiB to Arch and the rest (806 MiB) to the
+stateful partition, I hope this will be enough (autoupdates do not need space, they are
+directly applied to the new partition).
+
+The commands are
+
+   cgpt add -i 1  -b 266240  -s 1650688  -l STATE /dev/sda
+   cgpt add -i 13 -b 1916928 -s 20971520 -l ARCH  /dev/sda
+
+Note that this only modifies the size of the partitions, not the content. In particular,
+the headers of the stateful partition will now report the wrong size, Chrome OS will
+notice it and reformat the stateful partition using the previous size. We can avoid that
+by wiping the stateful partition, it will be automatically recreated at next boot
+
+   dd if=/dev/zero of=/dev/sda bs=131072 seek=1040 count=6448
+
+Note that we are erasing at a very low level a partition which is currently being used,
+this is black magic, you should reboot as soon as possible after the wipe or I guess that
+strange things will happen.
+
+Installing Arch Linux
+---------------------
