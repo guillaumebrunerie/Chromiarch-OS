@@ -62,6 +62,8 @@ come back to factory state. This will not void your warranty at all.
 * This is not straightforward (well, everything is relative), if you don’t know what a
 shell is, it will probably be difficult to follow. But I’ll try to keep the requirements
 low, in particular you don’t have to know anything about Chrome OS.
+* This is not just a proof of concept. I’m using this system everyday and find it very
+convenient.
 
 Developer mode
 --------------
@@ -197,3 +199,24 @@ strange things will happen.
 
 Installing Arch Linux
 ---------------------
+
+We are ready to install Arch Linux in our new partition. But don’t be too optimistic, the
+official installer won’t work because Chrome OS’ BIOS can’t boot on a live USB.
+
+You have several options here. I will not describe the first one extensively because it’s
+exactly the same thing as described [here](TODO). Basically you will install Arch Linux in
+Virtualbox, transfer the raw partition onto your Chromebook, and dd the partition directly
+in the ARCH partition. If you want to do this, note that you don’t need a Chromium OS
+chroot, you can just copy the cgpt tool from your Chromebook to your main computer.
+
+If your main computer is running Arch Linux, an easier solution is the mkarchroot tool (in
+the devtools package). On your main Arch Linux computer, create a minimal Arch Linux
+chroot with the following command: `mkarchroot /path/to/somewhere/archroot base` (note
+that Chrome OS’ kernel is 32 bits, so if you are on Arch64 you will need a custom
+`pacman.conf` including 32 bits repositories.
+
+Once you have a working Arch chroot, you can archive it:
+`tar czvf rootfs.tgz /path/to/somewhere/archroot`, transfer it onto your Chromebook
+(through the network or with an USB stick), make a new ext4 file system on the ARCH
+partition (or whatever filesystem you want): `mkfs.ext4 /dev/sda1` and untar the Arch
+chroot in the new partition.
