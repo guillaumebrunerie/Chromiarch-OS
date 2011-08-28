@@ -6,8 +6,12 @@ Description
 
 Chromiarch OS is a way to have both Chrome OS and Arch Linux running simultaneously on
 a Samsung Chromebook. Chromiarch OS consists mainly of this documentation together with
-some useful scripts.
-A video showing Chromiarch OS will be uploaded soon.
+some useful scripts. A video showing Chromiarch OS will be uploaded soon.
+
+If you install Chromiarch OS following this guide, your system will look like this:
+When you boot your computer, it will boot Chrome OS normally (except that you will need to
+press Ctrl + D on boot because of developer mode). You will then have Chrome OS’ X server
+on tty1, Chrome OS’ dev console on tty2 and Arch Linux’ getty on tty3. When you login
 
 Drawbacks
 ---------
@@ -22,10 +26,10 @@ particular, two-finger drag&drop does not work anymore (but two finger scrolling
 easier with synaptics).
 * Screen dimming is disabled, so your screen will not be powerd off anymore when you are
 not using your computer (but suspend still works).
-* Chrome OS autoupdates will break Chromiarch OS. But this is easy to fix, after an
-autoupdate Chrome OS will restart without Arch, you just have to run the script
-"chromiarchos_restore", reboot, run "chromiarchos_restore" again and reboot, and this is
-fixed.
+* Playing sound from Chrome OS and Arch simultaneously does not work, I haven’t figured
+out how to fix this.
+* Chrome OS autoupdates will break Chromiarch OS, but it will take you less than one
+minute to restore it.
 * The SSD is small. At best you can give 9 or 10 Gib to Arch.
 * The keys from the upper row are the functions keys F1 to F10. This means that you will
 not have F11 nor F12 and that changing brightness or sound volume will not work in Arch
@@ -35,8 +39,8 @@ need to recompile Chromium OS’ kernel.
 * If something goes wrong and your computer does not want to boot, you’re almost screwed.
 You can either run recovery mode, but this will erase completely Arch and all your data
 (except Chrome OS’ data which is in the cloud), or build Chromium OS to have a bootable
-USB key and repair your computer from here (but building Chromium OS is complicated).
-You can also perhaps use prebuilt binaries, like Hexxeh’s builds, I guess it should work.
+USB key and repair your computer from here (but building Chromium OS is difficult). You
+can also try prebuilt binaries, like Hexxeh’s builds, I guess it should work.
 
 Quick explanation
 -----------------
@@ -46,9 +50,9 @@ to make Arch run inside Chrome OS. Don’t worry, a much much more detailed expl
 follow.
 
 You will switch your device to developer mode, create a new partition for Arch, install
-Arch in VirtualBox and copy it into the new partition. Then you will write a new upstart
-job (Chrome OS uses upstart) to run a getty chrooted into Arch Linux. This getty will
-then start a second X server (in the chroot) on login.
+Arch in a chroot and copy it into the new partition. Then you will write a new upstart job
+(Chrome OS uses upstart) to run a getty chrooted into Arch Linux. This getty will then
+start a second X server (in the chroot) on login.
 
 Notes
 -----
@@ -64,6 +68,9 @@ shell is, it will probably be difficult to follow. But I’ll try to keep the re
 low, in particular you don’t have to know anything about Chrome OS.
 * This is not just a proof of concept. I’m using this system everyday and find it very
 convenient.
+* This is only the description of my setup. It is not made to be configurable, it’s made
+to do what I want personally. If you want something else, you are of course free to edit
+the scripts or adapt the instructions to your needs.
 
 Developer mode
 --------------
@@ -215,8 +222,115 @@ chroot with the following command: `mkarchroot /path/to/somewhere/archroot base`
 that Chrome OS’ kernel is 32 bits, so if you are on Arch64 you will need a custom
 `pacman.conf` including 32 bits repositories.
 
-Once you have a working Arch chroot, you can archive it:
-`tar czvf rootfs.tgz /path/to/somewhere/archroot`, transfer it onto your Chromebook
+Once you have a working Arch chroot, you can compress it:
+`tar czvf rootfs.tgz -C /path/to/somewhere/archroot .`, transfer it onto your Chromebook
 (through the network or with an USB stick), make a new ext4 file system on the ARCH
-partition (or whatever filesystem you want): `mkfs.ext4 /dev/sda1` and untar the Arch
-chroot in the new partition.
+partition (or whatever filesystem you want): `mkfs.ext4 /dev/sda13` and untar the Arch
+chroot in the new partition:
+`mkdir /tmp/ARCH; mount /dev/sda13 /tmp/ARCH; tar xzvf rootfs.tgz -C /tmp/ARCH .`
+
+Entering the chroot
+-------------------
+
+To enter your new chroot (in your Chromebook) issue the following commands:
+
+   mkdir /tmp/chroot
+   mount /dev/sda13 /tmp/chroot
+   mount -o bind   /dev   /tmp/chroot/dev
+   mount -t devpts devpts /tmp/chroot/dev/pts
+   mount -t tmpfs  devshm /tmp/chroot/dev/shm
+   mount -t proc   proc   /tmp/chroot/proc
+   mount -t sysfs  sys    /tmp/chroot/sys
+   chroot /tmp/chroot /bin/bash
+
+
+
+X server
+--------
+
+We have a working Arch chroot in the Chromebook, we can now install the X server inside
+this chroot. Don’t forget to install the package xf86-video-intel for the graphic card.
+You can install the window manager / desktop environment you want and run the X server
+with `startx`.
+
+It should work, except for a few things: the touchpad, the sound, direct rendering and
+the webcam.
+
+Sound, direct rendering and the webcam
+--------------------------------------
+
+The problem is actually very tricky. Playing sound requires write access to the
+`/dev/snd/*` device nodes. The nodes are owned by `root:audio` with permissions
+`rw-rw----` and you are in the `audio` group, so you should be able to play sound, right?
+
+Well, no. The Linux kernel doesn’t actually knows what the `audio` group is, internally
+groups are numbers and the mapping between numbers and names is in the `/etc/group` file.
+And guess what? The audio group doesn’t correspond to the same number in Chrome OS and
+Arch Linux, so the device nodes are not seen owned by the `audio` group in Arch Linux.
+
+This is easy to fix, just edit the `/etc/group` file in Arch Linux to change the `audio`
+number to 18.
+
+The webcam and direct rendering suffer from the same problem with the `video` group. Just
+change the number corresponding to the `video` group to 27 and it will work.
+
+Touchpad
+--------
+
+Now we come to the touchpad.
+
+Here is a little explanation of the problem: for some unknown reason, Chrome OS doesn’t
+use the open source synaptics driver but the closed source syntp driver (which is not even
+available to regular Linux users). This driver doesn’t support `/dev/input/*` devices, it
+needs a raw access to the device, so there is a udev rule at
+`/lib/udev/rules.d/75-synaptics.rules` which change the touchpad mode to serio_raw mode.
+But when the touchpad is in serio_raw mode, the synaptics driver in Arch can’t see it, so
+it doesn’t work.
+
+The solution will simply be to remove the offending udev rule. The touchpad will stay in
+evdev mode and synaptics will work. Fortunately, there is already a config file for
+synaptics in Chrome OS (at `/etc/X11/xorg.conf.d/50-touchpad-synaptics.conf`) so the
+touchpad will also use synaptics in Chrome OS.
+
+If after removing the udev rule and rebooting, the touchpad is behaving strangely, you may
+need to reboot once again. It seems to be a bug in the touchpad firmware but I’m not sure.
+
+Internet
+--------
+
+In order to have Internet in the chroot, you have to copy the /etc/resolv.conf file.
+
+Re-enabling the OOM killer
+--------------------------
+
+The OOM (Out of memory) killer is a component of the Linux kernel used to kill some
+process when the system runs out of memory. You can tweak the likeliness of some process
+to be killed by changing the value of `/proc/<pid>/oom_score_adj` (this should be a value
+between -1000 and 1000, the higher the value is the higher the chances are that this
+process will be killed first, if the value is -1000 the process will never be OOM killed).
+
+Chrome OS is extensively using this feature (for example the foreground tab will have a
+higher oom_score_adj), and by default every daemon has OOM killing disabled. This means
+that every process you will run in Arch will never be choosed by the OOM killer.
+
+So we write 0 (the usual default value) into `/proc/$$/oom_score_adj` and every Arch
+process will inherit this value.
+
+Putting all this together
+-------------------------
+
+So far so good, we can now write a script which will automatically mount the ARCH
+partition. This script is available as `chromiarchos_run` and should be put in the
+`/usr/local/bin` directory in Chrome OS.
+
+I check that the chroot directory doesn’t exist and that you are root. Then I create the
+directory, mount the root partition, the /dev, the /etc/resolv.conf and the root
+filesystem of Chrome OS (in order to be able to access it from Arch, this is completely
+optional).
+
+Then I enter the chroot (with something called `jchroot`, see later) and run the
+`/usr/local/bin/chromiarchos_sysinit` script. This script will do some initialisation and
+then start agetty. When agetty stops, the scripts returns and I can kill every program
+still running in Arch, unmount the partitions and remove the directory (note that `/tmp`
+in Chrome OS is mounted as tmpfs, so it is automatically cleared anyway after a reboot).
+
