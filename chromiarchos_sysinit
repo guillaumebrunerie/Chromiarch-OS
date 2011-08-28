@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+# /etc/rc.sysinit
+#
+
+exec > /dev/tty3
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+echo " "
+printhl "Chromiarch OS (Arch Linux microboot)\n"
+printhl "${C_H2}http://www.archlinux.org"
+printsep
+
+# mount /proc, /sys, /run, /dev, /run/lock, /dev/pts, /dev/shm (the api filesystems)
+ mountpoint -q /proc    || mount -n -t proc proc /proc -o nosuid,noexec,nodev
+ mountpoint -q /sys     || mount -n -t sysfs sys /sys -o nosuid,noexec,nodev
+ mountpoint -q /run     || mount -n -t tmpfs run /run -o mode=0755,size=10M,nosuid,nodev
+ mountpoint -q /dev     || mount -n -t devtmpfs udev /dev -o mode=0755,size=10M,nosuid &>/dev/null \
+ 	|| mount -n -t tmpfs udev /dev -o mode=0755,size=10M,nosuid
+ mkdir -p -m 1777 /run/lock
+ mkdir -p /dev/{pts,shm}
+ mountpoint -q /dev/pts || mount -n /dev/pts &>/dev/null \
+ 	|| mount -n -t devpts devpts /dev/pts -o mode=0620,gid=5,nosuid,noexec
+ mountpoint -q /dev/shm || mount -n /dev/shm &>/dev/null \
+ 	|| mount -n -t tmpfs shm /dev/shm -o mode=1777,nosuid,nodev
+
+# remount root ro to allow for fsck later on, we remount now to
+# make sure nothing can open files rw on root which would block a remount
+status "Mounting Root Read-Only" mount -n -o remount,ro /
+
+
+# Check filesystems
+[[ -f /forcefsck ]] || in_array forcefsck $(< /proc/cmdline) && FORCEFSCK="-- -f"
+declare -r FORCEFSCK
+if [[ -x $(type -P fsck) ]]; then
+	stat_busy "Checking Filesystems"
+		fsck_all >|"${FSCK_OUT:-/dev/stdout}" 2>|"${FSCK_ERR:-/dev/stdout}"
+	declare -r fsckret=$?
+	(( fsckret <= 1 )) && stat_done || stat_fail
+else
+	declare -r fsckret=0
+fi
+
+
+
+fsck_do_not_reboot() {
+	# $1 = exit code returned by fsck
+	# Ignore conditions 'FS errors corrected' and 'Cancelled by the user'
+	(( ($1 | 33) == 33 )) && return 0
+	if (( $1 & 2 )); then
+		echo
+		echo "********************** REBOOT REQUIRED *********************"
+		echo "*                                                          *"
+		echo "*     Please reboot manually                               *"
+		echo "*                                                          *"
+		echo "************************************************************"
+		echo
+	else
+		echo
+		echo "*****************  FILESYSTEM CHECK FAILED  ****************"
+		echo "*                                                          *"
+		echo "*  Please repair manually and reboot. Note that the root   *"
+		echo "*  file system is currently mounted read-only. To remount  *"
+		echo "*  it read-write type: mount -n -o remount,rw /            *"
+		echo "*                                                          *"
+		echo "************************************************************"
+		echo
+		sulogin -p
+	fi
+	read
+}
+
+
+# Single-user login and/or automatic reboot if needed
+fsck_do_not_reboot $fsckret
+
+status "Remounting Root Read/Write" \
+	mount -n -o remount,rw /
+
+# Remove leftover files
+remove_leftover
+
+if [[ $HOSTNAME ]]; then
+	stat_busy "Setting Hostname: $HOSTNAME"
+	echo "$HOSTNAME" >| /proc/sys/kernel/hostname && stat_done || stat_fail
+fi
+
+# Flush old locale settings and set user defined locale
+stat_busy "Setting Locale: ${LOCALE:=en_US}"
+	echo "export LANG=$LOCALE" > /etc/profile.d/locale.sh &&
+chmod 0755 /etc/profile.d/locale.sh && stat_done || stat_fail
+
+
+if [[ ${LOCALE,,} =~ utf ]]; then
+	stat_busy "Setting Consoles to UTF-8 mode"
+		# UTF-8 consoles are default since 2.6.24 kernel
+		# this code is needed not only for older kernels,
+		# but also when user has set vt.default_utf8=0 but LOCALE is *.UTF-8.
+		for i in /dev/tty[0-9]*; do
+			kbd_mode -u < ${i}
+			printf "\e%%G" > ${i}
+		done
+		echo 1 >| /sys/module/vt/parameters/default_utf8
+	stat_done
+else
+	stat_busy "Setting Consoles to legacy mode"
+		# make non-UTF-8 consoles work on 2.6.24 and newer kernels
+		for i in /dev/tty[0-9]*; do
+			kbd_mode -a < ${i}
+			printf "\e%%@" > ${i}
+		done
+		echo 0 >| /sys/module/vt/parameters/default_utf8
+	stat_done
+fi
+[[ $KEYMAP ]] &&
+	status "Loading Keyboard Map: $KEYMAP" loadkeys -q $KEYMAP
+
+# Set console font if required
+set_consolefont
+
+stat_busy "Saving dmesg Log"
+	if [[ -e /proc/sys/kernel/dmesg_restrict ]] &&
+		(( $(< /proc/sys/kernel/dmesg_restrict) == 1 )); then
+		install -Tm 0600 <( dmesg ) /var/log/dmesg.log
+	else
+		install -Tm 0644 <( dmesg ) /var/log/dmesg.log
+	fi
+(( $? == 0 )) && stat_done || stat_fail
+
+
+### rc.multi
+
+
+# Load sysctl variables if sysctl.conf is present
+[[ -r /etc/sysctl.conf ]] && sysctl -q -p &>/dev/null
+
+# Start daemons
+for daemon in "${DAEMONS[@]}"; do
+	case ${daemon:0:1} in
+		'!') continue;;     # Skip this daemon.
+		'@') start_daemon_bkgd "${daemon#@}";;
+		*)   start_daemon "$daemon";;
+	esac
+done
+
+[[ -x /etc/rc.local ]] && /etc/rc.local
+
+
+## Getty
+
+/sbin/agetty 38400 tty3 linux
+
+
+
+stop_all_daemons
