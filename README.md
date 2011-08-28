@@ -75,6 +75,12 @@ convenient and useful.
 to do what I want personally. If you want something else, you are of course free to edit
 the scripts or adapt the instructions to your needs.
 
+In the examples,
+
+    (co) # This is the Chrome OS shell
+    (al) # This is the Arch Linux shell on your main computer
+    (ca) # This is the Arch Linux shell on your Chromebook
+
 Developer mode
 --------------
 
@@ -182,12 +188,17 @@ Developer mode, part 2
 We will now replace the (read-write) BIOS by the dev BIOS which will accept a self-signed
 kernel and then remove rootfs verification by the kernel.
 
-To install the dev BIOS, run the command "chromeos-firmwareupdate --mode=todev" (as root)
+To install the dev BIOS, run the following command:
+
+    (co) # chromeos-firmwareupdate --mode=todev
+
 and reboot (the warning screen will not be the same). Now you should be using the dev
 firmware and you can remove rootfs verification with the command
-"/usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification" (the command will
-actually not work because it is dangerous to touch the partition you are not currently
-using, but it will tell you the right "--partitions n" argument to add).
+
+    (co) # /usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification
+
+(the command will actually not work because it is dangerous to touch the partition you are
+not currently using, but it will tell you the right "--partitions n" argument to add).
 
 If you reboot now, you should have rootfs verification disabled and mounted read-write.
 You can check it with rootdev (should give you a /dev/sda*), mount, or try to create a
@@ -209,15 +220,15 @@ new partitions).
 
 The commands are
 
-   cgpt add -i 1  -b 266240  -s 3747840  -l STATE /dev/sda
-   cgpt add -i 13 -b 4014080 -s 18874368 -l ARCH  /dev/sda
+    (co) # cgpt add -i 1  -b 266240  -s 3747840  -l STATE /dev/sda
+    (co) # cgpt add -i 13 -b 4014080 -s 18874368 -l ARCH  /dev/sda
 
 Note that this only modifies the size of the partitions, not the content. In particular,
 given that the headers of the stateful partition will now report the wrong size, Chrome OS
 will notice it and reformat the stateful partition using the previous size. We can avoid
 that by wiping the stateful partition, it will be automatically recreated at next boot
 
-   dd if=/dev/zero of=/dev/sda bs=131072 seek=1040 count=14640
+    (co) # dd if=/dev/zero of=/dev/sda bs=131072 seek=1040 count=14640
 
 Note that we are erasing at a very low level a partition which is currently being used,
 this is black magic, you should reboot as soon as possible after the wipe or I guess that
@@ -227,6 +238,12 @@ If everything went well, during the reboot you will see the message "Autorepair 
 progress", you will need to reconfigure (again) your Wi-Fi network and your Google
 account, and then the partitions will look like this:
 TODO
+
+Let’s create an ext4 file system on the new partition and mount it at /tmp/ARCH:
+
+    (co) # mkfs.ext4 /dev/sda13
+    (co) # mkdir /tmp/ARCH
+    (co) # mount /dev/sda13 /tmp/ARCH
 
 Installing Arch Linux
 ---------------------
@@ -242,36 +259,58 @@ partition directly in the ARCH partition. If you want to do this, note that you 
 a Chromium OS chroot, you can just copy the cgpt tool from your Chromebook to your main
 computer.
 
-I will not use this method here but something much lighter: the mkarchroot tool. You will
-need to have another computer running Arch Linux with the devtools package installed.
-If your main computer is running Arch Linux, an easier solution is to use the mkarchroot
-tool (in the devtools package). On your main Arch Linux computer, create a minimal Arch
-Linux chroot with the following command: `mkarchroot /path/to/somewhere/archroot base`
-(note that Chrome OS’ kernel is 32 bits, so if you are on Arch64 you will need a custom
-`pacman.conf` including 32 bits repositories.
+I will not use this method here but something much more lightweight: the mkarchroot
+tool. You will need to have another computer running Arch Linux with the devtools package
+installed. Choose where you want to create this chroot, for example `~/archroot`, and run
 
-Once you have a working Arch chroot, you can compress it:
-`tar czvf rootfs.tgz -C /path/to/somewhere/archroot .`, transfer it onto your Chromebook
-(through the network or with an USB stick), make a new ext4 file system on the ARCH
-partition (or whatever filesystem you want): `mkfs.ext4 /dev/sda13` and untar the Arch
-chroot in the new partition:
-`mkdir /tmp/ARCH; mount /dev/sda13 /tmp/ARCH; tar xzvf rootfs.tgz -C /tmp/ARCH .`
+    (al) # mkarchroot ~/archroot base
 
-Entering the chroot
--------------------
+Note that the kernel of Chrome OS is 32-bits, so if your main Arch Linux computer is
+64-bits you will have to create a 32-bits chroot by adding the `-C pacman.conf` option
+with a `pacman.conf` pointing to a 32-bits repository. You can use the `pacman.conf`
+provided with Chromiarch OS.
 
-To enter your new chroot (in your Chromebook) issue the following commands:
+If you want to save some place, you can remove the packages from base that you don’t need,
+for example `linux` (we will use Chrome OS’ kernel), utilities for fancy filesystems or
+networking tools. To keep it simple, I’ll install the whole base group.
 
-   mkdir /tmp/chroot
-   mount /dev/sda13 /tmp/chroot
-   mount -o bind   /dev   /tmp/chroot/dev
-   mount -t devpts devpts /tmp/chroot/dev/pts
-   mount -t tmpfs  devshm /tmp/chroot/dev/shm
-   mount -t proc   proc   /tmp/chroot/proc
-   mount -t sysfs  sys    /tmp/chroot/sys
-   chroot /tmp/chroot /bin/bash
+Now you can compress your chroot and put it on a USB stick:
+
+    (al) # tar czvf /media/MyUSBstick/rootfs.tgz -C ~/archroot .
+
+And decompress it on the ARCH partition you made earlier.
+
+    (co) # tar xzvf /media/MyUSBstick/rootfs.tgz -C /tmp/ARCH .
+
+Alternatively you can transfer it via SSH:
+
+    (co) # ssh username@myarchlinuxcomputer tar cz -C ~/archroot . | tar xzv -C /tmp/ARCH .
 
 
+You can now test your new chroot:
+
+    (co) # mount -o bind /dev /tmp/ARCH/dev   # Device nodes like /dev/null or /dev/random
+                                              # may not exist without this
+    (co) # mount -t proc proc /tmp/ARCH/proc  # Tools like top will not work without this
+    (co) # mount -t sysfs sys /tmp/ARCH/sys   # Some others tools may not work without this
+    (co) # chroot /tmp/ARCH /bin/bash
+
+You should be in the Arch Linux chroot on you Chromebook. Note that we bypassed the normal
+installation procedure, so you should configure your system as you would do in a normal
+install. The files you will want to configure are `/etc/rc.conf` (in particular the
+LOCALIZATION section, the HOSTNAME and the DAEMONS), `/etc/hosts`, `/etc/locale.gen` and
+`/etc/pacman.conf`. You will also want to set a root password with the `passwd` command.
+
+You can install more packages:
+
+    (ac) # pacman -S base-devel  # Everyone wants this package
+    (ac) # pacman -S sudo        # This one too
+    (ac) # pacman -S xorg-server xorg-xinit xorg-utils xorg-xserver-utils  # Install Xorg
+    (ac) # pacman -S xf86-video-intel  # The Chromebook has an Intel graphic card
+    (ac) # pacman -S xf86-input-synaptics  # There is a touchpad
+
+
+REREAD UNTIL HERE
 
 X server
 --------
@@ -291,7 +330,7 @@ The problem is actually very tricky. Playing sound requires write access to the
 `/dev/snd/*` device nodes. The nodes are owned by `root:audio` with permissions
 `rw-rw----` and you are in the `audio` group, so you should be able to play sound, right?
 
-Well, no. The Linux kernel doesn’t actually knows what the `audio` group is, internally
+Well, no. The Linux kernel doesn’t actually know what the `audio` group is, internally
 groups are numbers and the mapping between numbers and names is in the `/etc/group` file.
 And guess what? The audio group doesn’t correspond to the same number in Chrome OS and
 Arch Linux, so the device nodes are not seen owned by the `audio` group in Arch Linux.
