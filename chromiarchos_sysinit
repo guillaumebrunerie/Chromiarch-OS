@@ -3,14 +3,11 @@
 # /etc/rc.sysinit
 #
 
-exec > /dev/tty3
-
 . /etc/rc.conf
 . /etc/rc.d/functions
 
 echo " "
 printhl "Chromiarch OS (Arch Linux microboot)\n"
-printhl "${C_H2}http://www.archlinux.org"
 printsep
 
 # mount /proc, /sys, /run, /dev, /run/lock, /dev/pts, /dev/shm (the api filesystems)

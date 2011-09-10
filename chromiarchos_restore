@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# License: MIT, see the LICENSE file
+# Copyright © 2011, Guillaume Brunerie <guillaume.brunerie@[ens.fr|gmail.com]>
+
+HOSTNAME=Archbook
 
 mustberoot()
 {
@@ -27,7 +32,8 @@ fi
 # Determine if / is read-only or already read-write
 if [[ $(rootdev) != $(rootdev -s) ]]
 then
-    echo "Phase 1 of 2 : Disabling rootfs verification"
+    echo "Phase 1 of 2"
+    echo "* Disabling rootfs verification"
     ROOTDEV_PARTITION=$(rootdev -s | grep -o "[35]")
     KERNEL_PARTITION=$(( ROOTDEV_PARTITION - 1 ))
     case $KERNEL_PARTITION in
@@ -35,17 +41,26 @@ then
 	*) abort "Unable to determine current kernel partition (rootdev -s = $(rootdev -s))";;
     esac
     
-    echo "Faking"
-    echo /usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification --partitions $KERNEL_PARTITION
+    /usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification --partitions $KERNEL_PARTITION
 
     echo "Phase 1 of 2 completed, please reboot and run $0 again to complete the restoring."
 else
     if [[ ! -e /etc/init/tty3.conf ]]
     then
-        echo "Phase 2 of 2 : Installing new upstart job for Arch and switching to synaptics"
-        echo "Faking"
-        echo cp /usr/local/share/tty3.conf /etc/init/
-        echo mv /lib/udev/rules.d/75-synaptics.rules{,.bak}
+        echo "Phase 2 of 2"
+        echo "* Installing new upstart job for Arch"
+        cp /usr/local/share/tty3.conf /etc/init
+        echo "* Modifying hostname"
+        if [[  $(grep -c "^hostname localhost$" /sbin/chromeos_startup) == 1 \
+            && $(grep -c "^127.0.0.1	localhost$" /etc/hosts) == 1 \
+            && $(grep -c "^::1		localhost$" /etc/hosts) == 1 ]]
+        then
+            sed -i "s/^hostname localhost$/hostname $HOSTNAME/" /sbin/chromeos_startup
+            sed -i "s/^127.0.0.1	localhost$/127.0.0.1	localhost	$HOSTNAME/" /etc/hosts
+            sed -i "s/^::1		localhost$/::1		localhost	$HOSTNAME/" /etc/hosts
+        else
+            echo "Hostname configuration failed"
+        fi
         echo "Phase 2 of 2 completed, please reboot to start Chromiarch OS."
     else
         echo "Chromiarch OS should already be working on this Chromebook."

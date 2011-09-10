@@ -1,12 +1,16 @@
 Chromiarch OS
 =============
 
+     /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+     /!\ Alpha version, not tested as is /!\
+     /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+
 Description
 -----------
 
-Chromiarch OS is a way to have both Chrome OS and Arch Linux running simultaneously on
-a Samsung Chromebook. Chromiarch OS consists mainly of this documentation together with
-some useful scripts. A video showing the final result will be uploaded soon.
+Chromiarch OS is a way to have both Chrome OS and Arch Linux running simultaneously on a
+Samsung Chromebook. Chromiarch OS consist of this documentation together with some needed
+files. A video showing the final result will be available soon.
 
 If you install Chromiarch OS following this guide, your system will look like this:
 When you boot your computer, it will boot Chrome OS normally (except that you will need to
@@ -16,7 +20,13 @@ you login on tty3, you can choose to start a second X server (in Arch Linux) whi
 start on tty4. You can then switch between Chrome OS and Arch Linux with Ctrl + Alt + F1
 and Ctrl + Alt + F4.
 
-Drawbacks
+License
+-------
+This document and the associated files are distributed under the MIT license, see the
+`LICENSE` file.
+Copyright © 2011, Guillaume Brunerie <guillaume.brunerie@[ens.fr|gmail.com]>
+
+Drawbacks (TODO: rewrite and split bugs and obvious problems)
 ---------
 
 Here are a few drawbacks about using Chromiarch OS instead of Chrome OS or Arch Linux:
@@ -69,17 +79,21 @@ come back to factory state. This will not void your warranty at all.
 * This is not straightforward (well, everything is relative), if you don’t know what a
 shell is, it will probably be difficult to follow. But I’ll try to keep the requirements
 low, in particular you don’t have to know anything about Chrome OS.
-* This is not just a proof of concept. I’m using this system everyday and find it very
+* This is *not* just a proof of concept. I’m using this system everyday and find it very
 convenient and useful.
-* This is only the description of my setup. It is not made to be configurable, it’s made
-to do what I want personally. If you want something else, you are of course free to edit
-the scripts or adapt the instructions to your needs.
+* This is only the description of my system. It is not made to be configurable, it’s made
+to do what I want. If you want something else, you are of course free to edit the scripts
+or adapt the instructions to your needs.
 
 In the examples,
 
     (co) # This is the Chrome OS shell
     (al) # This is the Arch Linux shell on your main computer
-    (ca) # This is the Arch Linux shell on your Chromebook
+    (ca) # This is the chrooted Arch Linux shell on your Chromebook
+
+A `#` in the prompt indicates that the command should be run as root, and a `$` indicates
+that it should be run as an unprivileged user (`chronos` on Chrome OS, `username` in the
+chrooted Arch Linux shell on the Chromebook).
 
 Developer mode
 --------------
@@ -198,11 +212,11 @@ firmware and you can remove rootfs verification with the command
     (co) # /usr/share/vboot/bin/make_dev_ssd.sh --remove_rootfs_verification
 
 (the command will actually not work because it is dangerous to touch the partition you are
-not currently using, but it will tell you the right "--partitions n" argument to add).
+not currently using, but it will tell you the right `--partitions n` argument to add).
 
 If you reboot now, you should have rootfs verification disabled and mounted read-write.
 You can check it with rootdev (should give you a /dev/sda*), mount, or try to create a
-file /a ("touch /a" as chronos will give you a permission error if / is mounted read-write
+file /a (`touch /a` as chronos will give you a permission error if / is mounted read-write
 and a "read-only filesystem" error if it is not).
 
 Preparing the partitions
@@ -213,10 +227,10 @@ In order to install Arch, we need to create a new partition. I will create it as
 10.7 GiB is way too much for it. I do not really know how much space you should leave for
 the stateful partition, this will likely depend on how many offline webapps you will be
 using and how many files you will download. I’m not using many webapps and my stateful
-partition is currently using 350 MiB (according to df) or 280 MiB (according to du), so I
-will give 9 GiB to Arch and the rest (1830 MiB) to the stateful partition, I hope this
-will be enough (autoupdates do not need temporary space, they are directly applied to the
-new partitions).
+partition is currently using 350 MiB (according to `df`) or 280 MiB (according to `du`),
+so I will give 9 GiB to Arch and the rest (1830 MiB) to the stateful partition, I hope
+this will be enough (autoupdates do not need temporary space, they are directly applied to
+the new partitions).
 
 The commands are
 
@@ -267,7 +281,7 @@ installed. Choose where you want to create this chroot, for example `~/archroot`
 
 Note that the kernel of Chrome OS is 32-bits, so if your main Arch Linux computer is
 64-bits you will have to create a 32-bits chroot by adding the `-C pacman.conf` option
-with a `pacman.conf` pointing to a 32-bits repository. You can use the `pacman.conf`
+with a `pacman.conf` pointing to 32-bits repositories. You can use the `pacman.conf`
 provided with Chromiarch OS.
 
 If you want to save some place, you can remove the packages from base that you don’t need,
@@ -289,17 +303,36 @@ Alternatively you can transfer it via SSH:
 
 You can now test your new chroot:
 
-    (co) # mount -o bind /dev /tmp/ARCH/dev   # Device nodes like /dev/null or /dev/random
-                                              # may not exist without this
-    (co) # mount -t proc proc /tmp/ARCH/proc  # Tools like top will not work without this
-    (co) # mount -t sysfs sys /tmp/ARCH/sys   # Some others tools may not work without this
+    (co) # mount -o bind /dev /tmp/ARCH/dev   # We want the device nodes
+    (co) # mount -t proc proc /tmp/ARCH/proc  # We want informations about the processes
+    (co) # mount -t sysfs sys /tmp/ARCH/sys   # We want informations about the system
+    (co) # mount -o loop /etc/resolv.conf /tmp/ARCH/etc/resolv.conf  # We want Internet
     (co) # chroot /tmp/ARCH /bin/bash
+
+Configuring Arch Linux
+----------------------
 
 You should be in the Arch Linux chroot on you Chromebook. Note that we bypassed the normal
 installation procedure, so you should configure your system as you would do in a normal
-install. The files you will want to configure are `/etc/rc.conf` (in particular the
-LOCALIZATION section, the HOSTNAME and the DAEMONS), `/etc/hosts`, `/etc/locale.gen` and
-`/etc/pacman.conf`. You will also want to set a root password with the `passwd` command.
+install (cf the official Arch Linux install guide for further explanations):
+
+- `/etc/rc.conf` : You may want to configure everything in the LOCALIZATION section,
+  except the HARDWARE_CLOCK variable (Arch will not touch the hardware clock at all), the
+  HOSTNAME variable and the DAEMONS array. Everything else will not be used. Note that the
+  keyboard keymap and fonts will also be used in the Chrome OS dev console on tty2.
+- `/etc/hosts` : Just put here the HOSTNAME you configured in `/etc/rc.conf`.
+- `/etc/locale.gen` : Uncomment the locales you need and run `locale-gen`.
+
+You don’t need to configure the other files.
+
+Now you should set a root password:
+
+    (ac) # passwd
+
+And create a non-privileged user:
+
+    (ac) # adduser username   # Choose the audio, video and wheel groups as additional
+                              # groups, for example
 
 You can install more packages:
 
@@ -309,79 +342,135 @@ You can install more packages:
     (ac) # pacman -S xf86-video-intel  # The Chromebook has an Intel graphic card
     (ac) # pacman -S xf86-input-synaptics  # There is a touchpad
 
+In order to test the X server, we will install the following three packages used in the default
+`.xinitrc`.
 
-REREAD UNTIL HERE
+    (ac) # pacman -S xserver-twm xserver-xclock xterm
 
-X server
---------
+Now let’s test it:
 
-We have a working Arch chroot in the Chromebook, we can now install the X server inside
-this chroot. Don’t forget to install the package xf86-video-intel for the graphic card.
-You can install the window manager / desktop environment you want and run the X server
-with `startx`.
+    (ac) # su username
+    (ac) $ startx -- :1
 
-It should work, except for a few things: the touchpad, the sound, direct rendering and
-the webcam.
+We have to specify a different display `:1` because otherwise it will conflict with Chrome
+OS’ X server.
 
-Sound, direct rendering and the webcam
---------------------------------------
+It should start a minimal environment with three xterm windows and one xclock (unless you
+have already installed another desktop environment / window manager). You will notice that
+the touchpad do not work, but we’ll fix that later.
 
-The problem is actually very tricky. Playing sound requires write access to the
-`/dev/snd/*` device nodes. The nodes are owned by `root:audio` with permissions
-`rw-rw----` and you are in the `audio` group, so you should be able to play sound, right?
+Now install a desktop environment / window manager:
 
-Well, no. The Linux kernel doesn’t actually know what the `audio` group is, internally
+    (ac) $ sudo pacman -S gnome gnome-extras gnome-shell
+    (ac) $ echo "exec gnome-session" > ~/.xinitrc
+
+If you restart X now, you will notice other things that do not work: the sound, the
+webcam, the hardware accelerated graphics (direct rendering), and still the touchpad.
+
+Sound, direct rendering and webcam
+----------------------------------
+
+This problem is kind of tricky. Playing sound requires write access to the `/dev/snd/*`
+device nodes. These nodes are owned by `root:audio` with permissions `rw-rw----` and you
+are in the `audio` group, so you should be able to play sound, right?
+
+Well, no. The Linux kernel doesn’t actually know what the `audio` group is. Internally
 groups are numbers and the mapping between numbers and names is in the `/etc/group` file.
 And guess what? The audio group doesn’t correspond to the same number in Chrome OS and
-Arch Linux, so the device nodes are not seen owned by the `audio` group in Arch Linux.
+Arch Linux, so the device nodes are owned by the `audio` group in Chrome OS but not
+anymore in Arch Linux.
 
 This is easy to fix, just edit the `/etc/group` file in Arch Linux to change the `audio`
-number to 18.
+number to 18 (there is no conflict, no group has the number 18 in Arch Linux).
 
-The webcam and direct rendering suffer from the same problem with the `video` group. Just
-change the number corresponding to the `video` group to 27 and it will work.
+There is the same problem with the `video` group (used for the webcam and the hardware
+accelerated graphics), so you should also change the number corresponding to the `video`
+group to 27 and it will work.
 
 Touchpad
 --------
 
 Now we come to the touchpad.
 
-Here is a little explanation of the problem: for some unknown reason, Chrome OS doesn’t
-use the open source synaptics driver but the closed source syntp driver (which is not even
-available to regular Linux users). This driver doesn’t support `/dev/input/*` devices, it
-needs a raw access to the device, so there is a udev rule at
-`/lib/udev/rules.d/75-synaptics.rules` which change the touchpad mode to serio_raw mode.
-But when the touchpad is in serio_raw mode, the synaptics driver in Arch can’t see it, so
-it doesn’t work.
+For some unknown reason, Chrome OS doesn’t use the open source synaptics driver but a
+closed source driver called "syntp" (which is not even available to regular Linux users).
+This driver doesn’t support devices in evdev mode (ie with a device node in `/dev/input/`),
+it needs raw access to the device, so there is a udev rule at
+`/lib/udev/rules.d/75-synaptics.rules` putting the touchpad into serio_raw mode.  But when
+the touchpad is in serio_raw mode, the synaptics driver in Arch can’t see it, so it
+doesn’t work.
 
-The solution will simply be to remove the offending udev rule. The touchpad will stay in
-evdev mode and synaptics will work. Fortunately, there is already a config file for
-synaptics in Chrome OS (at `/etc/X11/xorg.conf.d/50-touchpad-synaptics.conf`) so the
-touchpad will also use synaptics in Chrome OS.
+To solve the problem we will simply remove the udev rule. The touchpad will stay in evdev
+mode and synaptics will work. Of course syntp will not work anymore, but synaptics is also
+installed on Chrome OS and there is already a config file for synaptics in Chrome OS (at
+`/etc/X11/xorg.conf.d/50-touchpad-synaptics.conf`) so the touchpad will also work in
+Chrome OS using synaptics (this config file may be only present in the R15 version of
+Chrome OS)
 
-If after removing the udev rule and rebooting, the touchpad is behaving strangely, you may
-need to reboot once again. It seems to be a bug in the touchpad firmware but I’m not sure.
+    (co) # mv /etc/X11/xorg.conf.d/50-touchpad-synaptics.conf{,.bak}
 
-Internet
---------
+After rebooting, Chrome OS and Arch Linux should both have the touchpad using Synaptics
+and working. If the touchpad has a strange behaviour, try to reboot one more time (I don’t
+know why this is needed sometimes).
 
-In order to have Internet in the chroot, you have to copy the /etc/resolv.conf file.
+We will now make the system more user-friendly by making it start everything needed (and
+wanted) automatically at boot.
+
+Upstart rule
+------------
+
+Chrome OS uses upstart as init system. You can find all the config files in `/etc/init`.
+You can find the new `chromiarchos.conf` upstart job together with this documentation.
+This file defines a new upstart job starting and stopping with the `system-services`
+meta-job (this means that the job will start at boot, after the normal Chrome OS startup,
+so that we do not delay the login prompt of Chrome OS). The `post-start` snippet is taken
+from `tty2.conf`, it disables screen blanking for the console tty3. Finally the rule
+starts a script called `chromiarchos_run` that you should put in `/usr/local/bin` such
+that it will stay there between updates.
+
+Entering the chroot
+-------------------
+
+Let’s look at the `chromiarchos_run` script.
+
+I first change `stdout` and `stderr` to `/dev/tty3` and check that the chroot directory
+doesn’t exists and that we are root, or bad things could happen. Then I modify the config
+of the OOM killer (see next section for explanations) and I mount `/`, `/dev`,
+`/etc/resolv.conf` and the root of Chrome OS at `/media/chromeos` (such that I can access
+Chrome OS’ system files within Arch Linux, you should create the `/media/chromeos`
+directory first). Then I enter the chroot and run the `chromiarchos_sysinit` command, that
+should be installed in the chrooted Arch Linux. We’ll see the rest later.
 
 Re-enabling the OOM killer
 --------------------------
 
-The OOM (Out of memory) killer is a component of the Linux kernel used to kill some
+The OOM (Out Of Memory) killer is a component of the Linux kernel used to kill some
 process when the system runs out of memory. You can tweak the likeliness of some process
 to be killed by changing the value of `/proc/<pid>/oom_score_adj` (this should be a value
 between -1000 and 1000, the higher the value is the higher the chances are that this
-process will be killed first, if the value is -1000 the process will never be OOM killed).
+process will be killed first, if the value is -1000 the process will never be killed by
+the OOM killer).
 
-Chrome OS is extensively using this feature (for example the foreground tab will have a
-higher oom_score_adj), and by default every daemon has OOM killing disabled. This means
-that every process you will run in Arch will never be choosed by the OOM killer.
+Chrome OS is extensively using this feature (such that the current tab will only be killed
+at last resort, for example), and by default every daemon has OOM killing disabled. This
+has the consequence that every process you will run in Arch will never be choosed by the
+OOM killer, which is not necessarily a good feature.
 
-So we write 0 (the usual default value) into `/proc/$$/oom_score_adj` and every Arch
-process will inherit this value.
+So we write 0 (the usual default value) into `/proc/$$/oom_score_adj` (where `$$` is the
+pid of `chromiarchos_run`) and every Arch process will inherit this value.
+
+
+Starting Arch Linux
+-------------------
+
+The `chromiarchos_sysinit` script is a replacement for the usual `/etc/rc.sysinit` script.
+In fact I just took the concatenation of `/etc/rc.sysinit` and `/etc/rc.multi` and removed
+the sections I don’t need. I also added a call to agetty (because we don’t want the script
+to terminate, we want an agetty).
+
+/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+/!\ Do not read below, most likely outdated  /!\
+/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
 
 Putting all this together
 -------------------------
