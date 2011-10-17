@@ -10,7 +10,7 @@ Description
 
 Chromiarch OS is a way to have both Chrome OS and Arch Linux running simultaneously on a
 Samsung Chromebook. Chromiarch OS consist of this documentation together with some needed
-files. A video showing the final result will be available soon.
+files. A video showing the final result will be available some day.
 
 If you install Chromiarch OS following this guide, your system will look like this:
 When you boot your computer, it will boot Chrome OS normally (except that you will need to
@@ -19,6 +19,8 @@ on tty1, Chrome OS’ dev console on tty2 and an Arch Linux’ agetty on tty3. M
 you login on tty3, you can choose to start a second X server (in Arch Linux) which will
 start on tty4. You can then switch between Chrome OS and Arch Linux with Ctrl + Alt + F1
 and Ctrl + Alt + F4.
+There are of course a lot of different setups possible, I leave it up to you to adapt the
+instructions here to your needs.
 
 License
 -------
@@ -26,41 +28,51 @@ This document and the associated files are distributed under the MIT license, se
 `LICENSE` file.
 Copyright © 2011, Guillaume Brunerie <guillaume.brunerie@[ens.fr|gmail.com]>
 
-Drawbacks (TODO: rewrite and split bugs and obvious problems)
+Drawbacks
 ---------
 
-Here are a few drawbacks about using Chromiarch OS instead of Chrome OS or Arch Linux:
+There are a few drawbacks about using Chromiarch OS instead of Chrome OS or Arch Linux:
 
+General :
 * Your device has to be in developer mode. This means that you will have to press Ctrl + D
 at every boot and that boot time will be increased by a few seconds (don’t worry, boot
 time will still be less than 15 seconds).
-* The synaptics driver is used for the touchpad instead of the syntp driver. In
-particular, two-finger drag&drop does not work anymore (but two finger scrolling is much
-easier with synaptics).
-* Screen dimming is disabled, so your screen will not be powered off anymore when you are
-not using your computer.
-* Playing sound from Chrome OS and Arch simultaneously does not work, I haven’t figured
-out how to fix this.
-* Chrome OS autoupdates will break Chromiarch OS, but it will take you less than one
-minute to restore it.
+* For now, screen dimming has to be disabled, so your screen will not be powered off
+anymore when you are not using your computer.
+* If something goes wrong and your computer does not want to boot (or if you are stuck in
+guest mode without having access to a shell or tty switching, as happened to me once),
+it’s challenging to recover.
+You cannot boot on a live USB of a random Linux distribution, so you can either run
+recovery mode, but this will erase completely Arch and all your data (except Chrome OS’
+data which is in the cloud), or build Chromium OS to have a bootable Chromium OS USB key
+and repair your computer from there (but building Chromium OS is difficult). You can also
+try prebuilt binaries, like Hexxeh’s builds, I guess it should work (if shell access is
+enabled)
+
+In comparison to a true Arch Linux netbook :
 * The SSD is small. At best you can give 9 or 10 Gib to Arch.
 * The keys from the upper row are the functions keys F1 to F10. This means that you will
 not have F11 nor F12 and that changing brightness or sound volume will not work in Arch
-(unless you remap them in your window manager, but you will loose functions keys this way)
+(you can of course remap keys as you want in Arch, but there are still not enough keys)
 * Arch will run under Chrome OS’ linux kernel, so if you want a custom kernel, you will
-need to recompile Chromium OS’ kernel.
-* If something goes wrong and your computer does not want to boot, you’re almost screwed.
-You can either run recovery mode, but this will erase completely Arch and all your data
-(except Chrome OS’ data which is in the cloud), or build Chromium OS to have a bootable
-USB key and repair your computer from here (but building Chromium OS is difficult). You
-can also try prebuilt binaries, like Hexxeh’s builds, I guess it should work.
+need to recompile Chromium OS’ kernel (and this is not the easiest thing to do)
+* Chrome OS autoupdates will break the Arch part of Chromiarch OS, but it will take you
+one or two minutes to restore it.
+* You should not 
+
+In comparison to a Chrome OS netbook :
+* The synaptics driver is used for the touchpad instead of the syntp driver. In
+particular, two-finger drag&drop does not work anymore (but two finger scrolling is much
+easier with synaptics).
+* Chrome OS autoupdates will use more bandwidth, because delta updates are not available
+when you have modified you file system, so it will download full updates each time.
 
 Quick explanation
 -----------------
 
-If you are already a Chrome OS hacker, here is a very short outline of what will be done
-to make Arch run inside Chrome OS. Don’t worry, a much much more detailed explanation will
-follow.
+If you are already a Chrome OS/Linux hacker, here is a very short outline of what will be
+done to make Arch run inside Chrome OS. Don’t worry, a much much more detailed explanation
+will follow.
 
 You will switch your device to developer mode, create a new partition for Arch, install
 Arch in a chroot (on your main computer) and copy it into the new partition. Then you will
@@ -108,17 +120,19 @@ makes malwares very difficult to do.
 
 As you can guess, there is another mode (called developer mode) which will allow you to
 disable those protections. You can switch to dev mode with the dev mode switch present on
-your device (for the Samsung Chromebook, a photo is available [here](TODO)).
+your device (for the Samsung Chromebook, a photo is available [here](http://
+www.chromium.org/chromium-os/developer-information-for-chrome-os-devices/
+samsung-series-5-chromebook).
 
 Shut down your computer, flip the dev mode switch and boot your computer. You will see a
-warning screen with a sad computer asking you to press space because Chrome OS is
-broken. This is a lie! Chrome OS is not broken, you just have to press Ctrl + D to boot
-Chrome OS (you will need to do this every time your computer will boot, this is the
-drawback of dev mode). You can also wait 30 seconds, it will boot automatically (and your
-computer will beep after 20 seconds, this is normal). This screen is intended to normal
-users having accidentally flipped the dev mode switch. Such a user will most likely either
-switch the dev mode switch off immediately, run recovery mode or call technical support,
-so will not run a potentially insecure operating system.
+warning screen with a sad computer asking you to press space because the verification of
+Chrome OS is disabled. This is expected of course, and you should now *not* press Space
+but Ctrl + D instead (you will need to do this every time your computer will boot, this is
+the main drawback of dev mode). You can also wait 30 seconds, it will boot automatically
+(and your computer will beep after 20 seconds, this is normal). This screen is intended to
+normal users having accidentally flipped the dev mode switch. Such a user will most likely
+either switch the dev mode switch off immediately, run recovery mode or call technical
+support, so will not run a potentially insecure operating system.
 
 During the first boot in dev mode, Chrome OS will slowly erase the stateful partition
 (more on partitions in the next section) so you will have to wait 5 / 10 minutes. You will
@@ -137,7 +151,7 @@ active.
 Partitions
 ----------
 
-Before going on, I should explain the (non standard) partitionning system of Chrome OS.
+Before going on, I should explain the (unusual) partitionning system of Chrome OS.
 
 Unlike most computers, Chrome OS uses GPT partition tables. This is a "new" partitionning
 system replacing the old MBR, without restrictions on the number or the size of partitions
@@ -357,7 +371,7 @@ OS’ X server.
 
 It should start a minimal environment with three xterm windows and one xclock (unless you
 have already installed another desktop environment / window manager). You will notice that
-the touchpad do not work, but we’ll fix that later.
+the touchpad does not work, but we’ll fix that later.
 
 Now install a desktop environment / window manager:
 
@@ -413,8 +427,17 @@ After rebooting, Chrome OS and Arch Linux should both have the touchpad using Sy
 and working. If the touchpad has a strange behaviour, try to reboot one more time (I don’t
 know why this is needed sometimes).
 
-We will now make the system more user-friendly by making it start everything needed (and
-wanted) automatically at boot.
+We will now make the system more user-friendly by making it start everything needed
+automatically at boot.
+
+Hostname
+--------
+
+You may notice others problems, for example the brightness and power keys that do not work
+anymore. This is due to the `powerd` daemon crashing because the hostname of the computer
+changed after the boot. You should either not change the hostname in Archlinux (the
+hostname is `localhost` by default and cannot be customized) or change the hostname
+directly in the init scripts of Chrome OS (`/sbin/chromeos_start` and `/etc/hosts`)
 
 Upstart rule
 ------------
@@ -424,22 +447,23 @@ You can find the new `chromiarchos.conf` upstart job together with this document
 This file defines a new upstart job starting and stopping with the `system-services`
 meta-job (this means that the job will start at boot, after the normal Chrome OS startup,
 so that we do not delay the login prompt of Chrome OS). The `post-start` snippet is taken
-from `tty2.conf`, it disables screen blanking for the console tty3. Finally the rule
-starts a script called `chromiarchos_run` that you should put in `/usr/local/bin` such
-that it will stay there between updates.
+from `tty2.conf`, it disables screen blanking for the console `tty3`. Finally the rule
+starts a script called `chromiarchos-run` that you should put in `/usr/local/bin` such
+that it will stay there between auto-updates.
 
 Entering the chroot
 -------------------
 
-Let’s look at the `chromiarchos_run` script.
+Let’s look at the `chromiarchos-run` script.
 
 I first change `stdout` and `stderr` to `/dev/tty3` and check that the chroot directory
 doesn’t exists and that we are root, or bad things could happen. Then I modify the config
-of the OOM killer (see next section for explanations) and I mount `/`, `/dev`,
-`/etc/resolv.conf` and the root of Chrome OS at `/media/chromeos` (such that I can access
-Chrome OS’ system files within Arch Linux, you should create the `/media/chromeos`
-directory first). Then I enter the chroot and run the `chromiarchos_sysinit` command, that
-should be installed in the chrooted Arch Linux. We’ll see the rest later.
+of the OOM killer (see next section for explanations) and I mount `/` and `/dev`,
+and the root of Chrome OS at `/media/chromeos` (such that I can access Chrome OS’ system
+files within Arch Linux, you should create the `/media/chromeos` directory first), and the
+`/etc/resolv.conf` is linked from `/media/chromeos`. Then I enter the chroot and run the
+`chromiarchos-init` command, that should be installed in the chrooted Arch Linux. We’ll
+see the rest later.
 
 Re-enabling the OOM killer
 --------------------------
@@ -452,41 +476,19 @@ process will be killed first, if the value is -1000 the process will never be ki
 the OOM killer).
 
 Chrome OS is extensively using this feature (such that the current tab will only be killed
-at last resort, for example), and by default every daemon has OOM killing disabled. This
+in last resort, for example), and by default every daemon has OOM killing disabled. This
 has the consequence that every process you will run in Arch will never be choosed by the
 OOM killer, which is not necessarily a good feature.
 
-So we write 0 (the usual default value) into `/proc/$$/oom_score_adj` (where `$$` is the
-pid of `chromiarchos_run`) and every Arch process will inherit this value.
+So we write 0 (the default value) into `/proc/$$/oom_score_adj` (where `$$` is the
+pid of `chromiarchos-run`) so that every Arch process will inherit this value.
 
 
 Starting Arch Linux
 -------------------
 
-The `chromiarchos_sysinit` script is a replacement for the usual `/etc/rc.sysinit` script.
-In fact I just took the concatenation of `/etc/rc.sysinit` and `/etc/rc.multi` and removed
-the sections I don’t need. I also added a call to agetty (because we don’t want the script
-to terminate, we want an agetty).
-
-/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
-/!\ Do not read below, most likely outdated  /!\
-/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
-
-Putting all this together
--------------------------
-
-So far so good, we can now write a script which will automatically mount the ARCH
-partition. This script is available as `chromiarchos_run` and should be put in the
-`/usr/local/bin` directory in Chrome OS.
-
-I check that the chroot directory doesn’t exist and that you are root. Then I create the
-directory, mount the root partition, the /dev, the /etc/resolv.conf and the root
-filesystem of Chrome OS (in order to be able to access it from Arch, this is completely
-optional).
-
-Then I enter the chroot (with something called `jchroot`, see later) and run the
-`/usr/local/bin/chromiarchos_sysinit` script. This script will do some initialisation and
-then start agetty. When agetty stops, the scripts returns and I can kill every program
-still running in Arch, unmount the partitions and remove the directory (note that `/tmp`
-in Chrome OS is mounted as tmpfs, so it is automatically cleared anyway after a reboot).
+The `chromiarchos-init` script is a replacement for the init system. It calls the scripts
+`chromiarchos-sysinit` and `chromiarchos-multi` (that are just the corresponding
+`/etc/rc.xxx` files where I removed what is not needed), then it starts `agetty`, and
+finally call the `chromiarchos-shutdown` script when `agetty` stops.
 

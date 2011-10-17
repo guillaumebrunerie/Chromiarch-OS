@@ -44,7 +44,7 @@ mount -o rbind / $CHROOT_DIR/media/chromeos
 
 
 # Main chroot
-chroot $CHROOT_DIR /usr/local/bin/chromiarchos_sysinit
+chroot $CHROOT_DIR /usr/local/bin/chromiarchos-init
 
 
 ##########################################
@@ -55,6 +55,6 @@ cd /
 
 kill_with_open_files_on $CHROOT_DIR
 
-cat /proc/mounts | awk '{print $2}' | grep "^$CHROOT_DIR" | sort -r | xargs umount
+cat /proc/mounts | awk '{print $2}' | grep "^$CHROOT_DIR" | tac | xargs umount
 
 rmdir $CHROOT_DIR
