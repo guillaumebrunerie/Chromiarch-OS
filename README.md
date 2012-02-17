@@ -264,8 +264,8 @@ the new partitions).
 
 The commands are
 
-    (co) # cgpt add -i 1  -b 266240  -s 3747840  -l STATE /dev/sda
-    (co) # cgpt add -i 13 -b 4014080 -s 18874368 -l ARCH  /dev/sda
+    (co) # cgpt add -i 1  -b 266240  -s 3747840  -l STATE        /dev/sda
+    (co) # cgpt add -i 13 -b 4014080 -s 18874368 -l ARCH -t data /dev/sda
 
 Note that this only modifies the size of the partitions, not the content. In particular,
 given that the headers of the stateful partition will now report the wrong size, Chrome OS
