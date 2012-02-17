@@ -334,8 +334,17 @@ You can now enter your new chroot and look around to see if everything looks fin
     (co) # mount -o bind /dev /tmp/ARCH/dev   # We want the device nodes
     (co) # mount -t proc proc /tmp/ARCH/proc  # We want informations about the processes
     (co) # mount -t sysfs sys /tmp/ARCH/sys   # We want informations about the system
-    (co) # mount -o loop /etc/resolv.conf /tmp/ARCH/etc/resolv.conf  # We want Internet
+    (co) # cp /etc/resolv.conf /tmp/ARCH/etc/resolv.conf  # We want Internet
     (co) # chroot /tmp/ARCH /bin/bash
+
+(Note: the copy of `/etc/resolv.conf` to `/tmp/ARCH/etc/resolv.conf` is temporary.
+       Indeed, this file is not supposed to be static, but is updated by flimflam (the
+       network manager daemon) when you connect to another network. In fact (because the
+       root file system is supposed to be read only), this is a symbolic link to the real
+       `/etc/resolv.conf` which is in `/var/run/flimflam/resolv.conf`. So the permanent
+       solution will be to have `/etc/resolv.conf` in Arch Linux to be a symbolic link to
+       `/media/chromeos/var/run/flimflam/resolv.conf`, when the root file system of Chrome
+       OS will be mounted at `/media/chromeos`.)
 
 Configuring Arch Linux
 ----------------------
