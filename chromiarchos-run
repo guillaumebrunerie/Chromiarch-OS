@@ -44,7 +44,7 @@ mount -o rbind / $CHROOT_DIR/media/chromeos
 
 
 # Main chroot
-chroot $CHROOT_DIR /usr/local/bin/chromiarchos-init
+chroot $CHROOT_DIR ${1:-/usr/local/bin/chromiarchos-init}
 
 
 ##########################################
