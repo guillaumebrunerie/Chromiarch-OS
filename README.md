@@ -332,6 +332,7 @@ Alternatively you can transfer it via SSH:
 You can now enter your new chroot and look around to see if everything looks fine:
 
     (co) # mount -o bind /dev /tmp/ARCH/dev   # We want the device nodes
+    (co) # mount -t devpts devpts /tmp/ARCH/dev/pts  # We want pseudoterminals
     (co) # mount -t proc proc /tmp/ARCH/proc  # We want informations about the processes
     (co) # mount -t sysfs sys /tmp/ARCH/sys   # We want informations about the system
     (co) # cp /etc/resolv.conf /tmp/ARCH/etc/resolv.conf  # We want Internet
@@ -429,9 +430,11 @@ group to 27 and it will work.
 Touchpad (TODO)
 --------
 
-(NB (added later): I think that syntp does not exists anymore, it has been replaced by
-another driver called cmt that should be nicer, so it is very possible that the touchpad
-will work out of the box now)
+(NB (added later): On the dev channel, syntp does not exists anymore, it has been replaced
+by another driver called cmt that should be nicer, so it is very possible that the
+touchpad will work out of the box now. If you are on stable channel, you will probably
+still need to do what’s described in this section until cmt becomes the default for
+everyone)
 
 Now we come to the touchpad.
 
