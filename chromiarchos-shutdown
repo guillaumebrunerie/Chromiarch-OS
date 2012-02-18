@@ -7,3 +7,6 @@
 . /etc/rc.d/functions
 
 stop_all_daemons
+
+printsep
+printhl "Chromiarch OS has been terminated"
