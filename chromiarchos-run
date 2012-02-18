@@ -29,7 +29,7 @@ echo 0 > /proc/$$/oom_score_adj
 
 # Mounts
 mkdir $CHROOT_DIR
-mount /dev/sda7 $CHROOT_DIR
+mount /dev/sda13 $CHROOT_DIR
 mount -o bind /dev $CHROOT_DIR/dev  # TODO check that this is really needed
 
 # Internet
