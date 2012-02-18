@@ -1,8 +1,8 @@
 #!/bin/bash
 
-. /usr/local/bin/chromiarchos-sysinit
-. /usr/local/bin/chromiarchos-multi
+bash /usr/local/bin/chromiarchos-sysinit
+bash /usr/local/bin/chromiarchos-multi
 
 /sbin/agetty 38400 tty3 linux
 
-. /usr/local/bin/chromiarchos-shutdown
+bash /usr/local/bin/chromiarchos-shutdown

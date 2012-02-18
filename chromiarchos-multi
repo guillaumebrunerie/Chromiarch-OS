@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# chromiarchos-multi
+#
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+# Load sysctl variables if sysctl.conf is present
+[[ -r /etc/sysctl.conf ]] && sysctl -q -p &>/dev/null
+
+# Start daemons
+for daemon in "${DAEMONS[@]}"; do
+	case ${daemon:0:1} in
+		'!') continue;;     # Skip this daemon.
+		'@') start_daemon_bkgd "${daemon#@}";;
+		*)   start_daemon "$daemon";;
+	esac
+done
+
+[[ -x /etc/rc.local ]] && /etc/rc.local

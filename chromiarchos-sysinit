@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# /etc/rc.sysinit
+# chromiarchos-sysinit
 #
 
 . /etc/rc.conf
@@ -126,29 +126,3 @@ stat_busy "Saving dmesg Log"
 	fi
 (( $? == 0 )) && stat_done || stat_fail
 
-
-### rc.multi
-
-
-# Load sysctl variables if sysctl.conf is present
-[[ -r /etc/sysctl.conf ]] && sysctl -q -p &>/dev/null
-
-# Start daemons
-for daemon in "${DAEMONS[@]}"; do
-	case ${daemon:0:1} in
-		'!') continue;;     # Skip this daemon.
-		'@') start_daemon_bkgd "${daemon#@}";;
-		*)   start_daemon "$daemon";;
-	esac
-done
-
-[[ -x /etc/rc.local ]] && /etc/rc.local
-
-
-## Getty
-
-/sbin/agetty 38400 tty3 linux
-
-
-
-stop_all_daemons

@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# chromiarchos-shutdown
+#
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+stop_all_daemons
