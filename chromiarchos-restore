@@ -4,6 +4,7 @@
 # Copyright © 2011, Guillaume Brunerie <guillaume.brunerie@[ens.fr|gmail.com]>
 
 HOSTNAME=Archbook
+UPSTART_FILE=chromiarchos.conf
 
 mustberoot()
 {
@@ -45,11 +46,11 @@ then
 
     echo "Phase 1 of 2 completed, please reboot and run $0 again to complete the restoring."
 else
-    if [[ ! -e /etc/init/tty3.conf ]]
+    if [[ ! -e /etc/init/$UPSTART_FILE ]]
     then
         echo "Phase 2 of 2"
         echo "* Installing new upstart job for Arch"
-        cp /usr/local/share/tty3.conf /etc/init
+        cp /usr/local/share/$UPSTART_FILE /etc/init
         echo "* Modifying hostname"
         if [[  $(grep -c "^hostname localhost$" /sbin/chromeos_startup) == 1 \
             && $(grep -c "^127.0.0.1	localhost$" /etc/hosts) == 1 \
