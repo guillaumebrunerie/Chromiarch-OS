@@ -5,13 +5,6 @@ Chromiarch OS
      /!\ Alpha version, not tested as is /!\
      /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
 
-     Temporary note : This file has not been updated for a few months, but I’m still using
-     this hybrid Chrome OS / Arch Linux system everyday. There are a few other problems
-     that I haven’t solved yet, in particular the latest version of `agetty` and `udev` do
-     not work here. So for now I’m still using `udev-175-1`, and I have replaced the
-     `/bin/agetty` binary by the one from August 2011 (`util-linux-2.19.1-3`) (use Arch
-     Rollback Machine). I someone manage to make them work, I’ll be happy to know it.
-
 Description
 -----------
 
