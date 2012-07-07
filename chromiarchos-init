@@ -3,6 +3,6 @@
 bash /usr/local/bin/chromiarchos-sysinit
 bash /usr/local/bin/chromiarchos-multi
 
-/sbin/agetty 38400 tty3 linux
+openvt -c 3 -f -w -- /sbin/agetty 38400 tty3
 
 bash /usr/local/bin/chromiarchos-shutdown
