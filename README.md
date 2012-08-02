@@ -452,6 +452,19 @@ After rebooting, Chrome OS and Arch Linux should both have the touchpad using Sy
 and working. If the touchpad has a strange behaviour, try to reboot one more time (I don’t
 know why this is needed sometimes).
 
+Xorg Config
+--------
+
+By default, Xorg relies on udev to determine input devices on startup
+(keyboard, trackpad, etc). Unfortunately, X does not detect input devices on
+startup in the chroot. (Probably because of different udev versions between
+ChromeOS and Arch). I use a minimal xorg.conf file to manually specify the
+keyboard and trackpad. Copy this file to /etc/X11/xorg.conf. Different
+chromebooks may need different /dev/input paths for the keyboard and trackpad.
+Use /var/log/Xorg.0.log from ChromeOS to determine the paths to use for your
+chromebook. Hotplugging new input devices after startup does seem to work even
+after manually specifying these input devices.
+
 Hostname
 --------
 
