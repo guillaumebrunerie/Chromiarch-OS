@@ -21,13 +21,6 @@ Chromiarch OS
      Fullmer](https://github.com/danielfullmer/Chromiarch-OS). Thanks to you for providing
      helpful feedback and fixes.
 
-     Temporary note : This file has not been updated for a few months, but I’m still using
-     this hybrid Chrome OS / Arch Linux system everyday. There are a few other problems
-     that I haven’t solved yet, in particular the latest version of `agetty` and `udev` do
-     not work here. So for now I’m still using `udev-175-1`, and I have replaced the
-     `/bin/agetty` binary by the one from August 2011 (`util-linux-2.19.1-3`) (use Arch
-     Rollback Machine). I someone manage to make them work, I’ll be happy to know it.
-
 Description
 -----------
 
@@ -474,6 +467,19 @@ Chrome OS)
 After rebooting, Chrome OS and Arch Linux should both have the touchpad using Synaptics
 and working. If the touchpad has a strange behaviour, try to reboot one more time (I don’t
 know why this is needed sometimes).
+
+Xorg Config
+--------
+
+By default, Xorg relies on udev to determine input devices on startup
+(keyboard, trackpad, etc). Unfortunately, X does not detect input devices on
+startup in the chroot. (Probably because of different udev versions between
+ChromeOS and Arch). I use a minimal xorg.conf file to manually specify the
+keyboard and trackpad. Copy this file to /etc/X11/xorg.conf. Different
+chromebooks may need different /dev/input paths for the keyboard and trackpad.
+Use /var/log/Xorg.0.log from ChromeOS to determine the paths to use for your
+chromebook. Hotplugging new input devices after startup does seem to work even
+after manually specifying these input devices.
 
 Hostname
 --------
