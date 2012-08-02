@@ -5,6 +5,22 @@ Chromiarch OS
      /!\ Alpha version, not tested as is /!\
      /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
 
+     New note (August 2012): I’m not using this system anymore. There are several reasons
+     for that. The main reason is that my Chromebook is broken: there is an hardware
+     problem at the connection between the alimentation cable and the computer, it still
+     works but it’s very hard to charge the battery and it will probably quickly become
+     impossible to use anymore. Also, I’ve become more and more annoyed by a few problems
+     such as the lack of space (I only had 5 Gio for Arch) on the SSD and the huge memory
+     consumption of Chrome when opening 20+ tabs. Also in my opinion Chrome OS was
+     becoming more and more buggy after every update (for example the new Aura desktop
+     made GTalk almost unusable), so I have now an eeePC with ArchLinux and a fullscreen
+     Chromium browser starting automatically on boot, and even if the screen is a bit
+     smaller, there are less problems than with Chrome OS.  So I’ll not update this
+     anymore but you should look at one of the several forks available by [Alexandre
+     Gravier](https://github.com/agravier/chromarch) and [Daniel
+     Fullmer](https://github.com/danielfullmer/Chromiarch-OS). Thanks to you for providing
+     helpful feedback and fixes.
+
      Temporary note : This file has not been updated for a few months, but I’m still using
      this hybrid Chrome OS / Arch Linux system everyday. There are a few other problems
      that I haven’t solved yet, in particular the latest version of `agetty` and `udev` do
@@ -17,7 +33,7 @@ Description
 
 Chromiarch OS is a way to have both Chrome OS and Arch Linux running simultaneously on a
 Samsung Chromebook. Chromiarch OS consist of this documentation together with some needed
-files. A video showing the final result will be available some day.
+files.
 
 If you install Chromiarch OS following this guide, your system will look like this:
 When you boot your computer, it will boot Chrome OS normally (except that you will need to
